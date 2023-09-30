@@ -19,6 +19,7 @@ class Ancestry(str, Enum):
     highttiefling = 'hightiefling'
     human = 'human'
     tiefling = 'tiefling'
+    lizardfolk = 'lizardfolk'
 
 
 class Language(str, Enum):
@@ -33,6 +34,7 @@ class Language(str, Enum):
     infernal = 'infernal'
     orcish = 'orcish'
     undercommon = 'undercommon'
+    lizardfolk = 'lizardfolk'
 
 
 app = typer.Typer()

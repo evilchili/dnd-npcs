@@ -7,7 +7,7 @@ import dice
 import textwrap
 
 
-_available_npc_types = {}
+AVAILABLE_NPC_TYPES = {}
 
 
 def a_or_an(s):
@@ -96,9 +96,9 @@ class BaseNPC:
 
     @property
     def full_name(self):
-        name = ' '.join([n.capitalize() for n in self.names])
+        name = ' '.join([n.title() for n in self.names])
         if self.title:
-            name = self.title.capitalize() + ' ' + name
+            name = self.title.title() + ' ' + name
         if self.nickname:
             name = f'{name} "{self.nickname}"'
         return name
@@ -332,12 +332,12 @@ def available_npc_types():
     """
     Load all available NPC submodules and return a dictionary keyed by module name.
     """
-    if not _available_npc_types:
+    if not AVAILABLE_NPC_TYPES:
         for filename in glob.glob(os.path.join(os.path.dirname(os.path.abspath(__file__)), '*.py')):
             module_name = os.path.basename(filename)[:-3]
             if module_name not in ['base', '__init__', 'traits']:
-                _available_npc_types[module_name] = import_module(f'npc.generator.{module_name}').NPC
-    return _available_npc_types
+                AVAILABLE_NPC_TYPES[module_name] = import_module(f'npc.generator.{module_name}').NPC
+    return AVAILABLE_NPC_TYPES
 
 
 def npc_type(ancestry=None):
@@ -358,8 +358,7 @@ def generate_npc(ancestry=None, names=[], pronouns=None, title=None, nickname=No
     """
     Return a randomized NPC. Any supplied keyword parameters will override the generated values.
 
-    By default, NPC stats are all 10 (+0). If randomize is True, the NPC will be given random stats from the standard
-    distribution, but overrides will still take precedence.
+    By default, NPC stats are all 10 (+0). If randomize is True, the NPC will be given random stats from the standard distribution, but overrides will still take precedence.
     """
     return npc_type(ancestry)(
         names=names,

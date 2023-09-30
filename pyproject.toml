@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dnd_npcs"
-version = "0.2.0"
+version = "0.3"
 description = "NPC tools for the telisar homebrew campaign setting"
 authors = ["evilchili <evilchili@gmail.com>"]
 license = "The Unlicense"
