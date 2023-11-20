@@ -91,17 +91,12 @@ class BaseNPC:
     @property
     def names(self):
         if not self._names:
-            self._names = [str(x) for x in self.language.person()]
+            self._names = next(self.name_generator.name(1))
         return self._names
 
     @property
     def full_name(self):
-        name = ' '.join([n.title() for n in self.names])
-        if self.title:
-            name = self.title.title() + ' ' + name
-        if self.nickname:
-            name = f'{name} "{self.nickname}"'
-        return name
+        return self.names.fullname
 
     @property
     def pronouns(self):
@@ -115,16 +110,11 @@ class BaseNPC:
 
     @property
     def title(self):
-        return self._title
+        return ' '.join(self.names.titles)
 
     @property
     def nickname(self):
-        if self._nickname is None and hasattr(self.language, 'nicknames'):
-            try:
-                self._nickname = random.choice(self.language.nicknames).capitalize()
-            except IndexError:
-                self._nickname = False
-        return self._nickname
+        return ', '.join(self.names.nicknames)
 
     @property
     def whereabouts(self):
