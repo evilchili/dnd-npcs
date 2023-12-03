@@ -1,45 +1,29 @@
-from npc.languages import draconic
-from npc.generator.base import BaseNPC, a_or_an
-from npc.generator import traits
+from functools import cached_property
+from npc import types
 import textwrap
 import random
 
+from language.languages import draconic
 
-class NPC(BaseNPC):
 
-    ancestry = 'Dragon'
-    language = draconic.Dragon()
+class Dragon(types.NPC):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    language = draconic
+    is_noble = True
 
-        self._tail = None
-        self._horns = None
-        self._fangs = None
-        self._wings = None
+    has_tail = True
+    has_horns = True
+    has_fangs = True
+    has_wings = True
 
-    @property
-    def nickname(self):
-        if not self._nickname:
-            self._nickname = "the " + random.choice(traits.personality)
-        return self._nickname
 
-    @property
-    def age(self):
-        if not self._age:
-            self._age = random.choice([
-                'wyrmling',
-                'young',
-                'adult',
-                'ancient',
-            ])
-        return self._age
+    @cached_property
+    def age(self) -> str:
+        return random.choice(['wyrmling', 'young', 'adult', 'ancient'])
 
-    @property
-    def pronouns(self):
-        if not self._pronouns:
-            self._pronouns = 'they/they'
-        return self._pronouns
+    @cached_property
+    def pronouns(self) -> str:
+        return 'they/they'
 
     @property
     def skin_color(self):
@@ -68,8 +52,8 @@ class NPC(BaseNPC):
             self.facial_structure,
         ])
         return (
-            f"{self.full_name} ({self.pronouns}) is {a_or_an(self.age)} {self.age} {self.skin_color} "
-            f"{self.ancestry.lower()} with {a_or_an(self.nose)} {self.nose} snout, {self.body} body and {trait}."
+            f"{self.name} ({self.pronouns}) is {types.a_or_an(self.age)} {self.age} {self.skin_color} "
+            f"{self.ancestry.lower()} with {types.a_or_an(self.nose)} {self.nose} snout, {self.body} body and {trait}."
         )
 
     @property
@@ -99,3 +83,6 @@ Goal:        {self.goal}
 Whereabouts: {self.whereabouts}
 
 """
+
+
+NPC = Dragon

@@ -1,172 +1,104 @@
-from npc.generator.base import generate_npc, npc_type
-from npc import languages
+from npc import load_ancestry_pack
 
-import random
-import typer
+
+import logging
+import os
 from enum import Enum
+from typing import Union
 
+import typer
 from rich import print
+from rich.logging import RichHandler
 
 
-class Ancestry(str, Enum):
-    dragon = 'dragon'
-    drow = 'drow'
-    dwarf = 'dwarf'
-    elf = 'elf'
-    halfling = 'halfling'
-    halforc = 'halforc'
-    highelf = 'highelf'
-    highttiefling = 'hightiefling'
-    human = 'human'
-    tiefling = 'tiefling'
-    lizardfolk = 'lizardfolk'
-
-
-class Language(str, Enum):
-    abyssal = 'abyssal'
-    celestial = 'celestial'
-    common = 'commmon'
-    draconic = 'draconic'
-    dwarvish = 'dwarvish'
-    elven = 'elven'
-    gnomish = 'gnomish'
-    halfling = 'halfing'
-    infernal = 'infernal'
-    orcish = 'orcish'
-    undercommon = 'undercommon'
-    lizardfolk = 'lizardfolk'
-
+from language import load_language_pack
 
 app = typer.Typer()
 
+app_state = {}
+
+language_pack, supported_languages = load_language_pack()
+SupportedLanguages = Enum("SupportedLanguages", ((k, k) for k in supported_languages.keys()))
+
+ancestry_pack, supported_ancestries = load_ancestry_pack()
+SupportedAncestries = Enum("SupportedAncestries", ((k, k) for k in supported_ancestries.keys()))
+
+
+def get_npc(**kwargs):
+    return app_state['ancestry'].NPC(language=app_state['language'], **kwargs)
+
+
+@app.callback(invoke_without_command=True)
+def main(
+    ctx: typer.Context,
+    ancestry: SupportedAncestries = typer.Option(
+        default="human",
+        help="The ancestry to use."
+    ),
+    language: Union[SupportedLanguages, None] = typer.Option(
+        default=None,
+        help="The language to use. Will be derived from ancestry if not specified."
+    ),
+    verbose: bool = typer.Option(
+        default=False,
+        help="If True, print verbose character descriptions."
+    )
+):
+    app_state["ancestry"] = supported_ancestries[ancestry.name]
+    if language:
+        app_state["language"] = supported_languages[language.name]
+    else:
+        app_state["language"] = None
+
+    debug = os.getenv("NPC_DEBUG", None)
+    logging.basicConfig(
+        format="%(name)s %(message)s",
+        level=logging.DEBUG if debug else logging.INFO,
+        handlers=[RichHandler(rich_tracebacks=True, tracebacks_suppress=[typer])],
+    )
+    logging.debug(f"Loaded ancestry pack {ancestry_pack}.")
+    logging.debug(f"Loaded language pack {language_pack}.")
+
+    app_state['verbose'] = verbose
+
+    if ctx.invoked_subcommand is None:
+        return commoner()
+
 
 @app.command()
-def npc(
-    ancestry: Ancestry = typer.Option(
-        None,
-        help='Derive NPC characteristics from a specific ancestry. Randomized if not specified.',
-    ),
-    name: str = typer.Option(
-        None,
-        help='Specify the NPC name. Randomized names are derived from ancestry',
-    ),
-    pronouns: str = typer.Option(
-        None,
-        help='Specify the NPC pronouns.',
-    ),
-    title: str = typer.Option(
-        None,
-        help='Specify the NPC title.',
-    ),
-    nickname: str = typer.Option(
-        None,
-        help='Specify the NPC nickname.',
-    ),
-    whereabouts: str = typer.Option(
-        None,
-        help='Specify the NPC whereabouts.',
-    ),
-    STR: str = typer.Option(
-        None,
-        help='Specify the NPC strength score.',
-    ),
-    DEX: str = typer.Option(
-        None,
-        help='Specify the NPC dexterity score.',
-    ),
-    CON: str = typer.Option(
-        None,
-        help='Specify the NPC constitution score.',
-    ),
-    INT: str = typer.Option(
-        None,
-        help='Specify the NPC intelligence score.',
-    ),
-    WIS: str = typer.Option(
-        None,
-        help='Specify the NPC wisdom score.',
-    ),
-    CHA: str = typer.Option(
-        None,
-        help='Specify the NPC charisma score.',
-    ),
-    randomize: bool = typer.Option(
-        False,
-        help='If True, randomize default stat scores. If False, all stats are 10.'
-    ),
-) -> None:
+def commoner() -> None:
     """
     Generate a basic NPC.
     """
-    print(generate_npc(
-        ancestry=ancestry,
-        names=name.split() if name else [],
-        pronouns=pronouns,
-        title=title,
-        nickname=nickname,
-        whereabouts=whereabouts,
-        STR=STR,
-        DEX=DEX,
-        CON=CON,
-        INT=INT,
-        WIS=WIS,
-        CHA=CHA,
-        randomize=randomize
-    ).character_sheet)
+    char = get_npc()
+    if app_state['verbose']:
+        print(char.character_sheet)
+    else:
+        print(char)
 
 
 @app.command()
-def names(ancestry: Ancestry = typer.Option(
-        None,
-        help='Derive NPC characteristics from a specific ancestry. Randomized if not specified.',
-    ),
-    count: int = typer.Option(
-        1,
-        help='How many names to generate.'
-    ),
-) -> None:
-    for _ in range(int(count)):
-        print(npc_type(ancestry)().full_name)
+def adventurer() -> None:
+    """
+    Generate a basic NPC.
+    """
+    char = get_npc(randomize=True)
+    if app_state['verbose']:
+        print(char.character_sheet)
+    else:
+        print(char)
 
 
 @app.command()
-def text(
-    language: Language = typer.Option(
-        'common',
-        help='The language for which to generate text.',
-    ),
-    count: int = typer.Argument(
-        50,
-        help='How many words to generate.'
-    ),
-) -> None:
-    mod = getattr(languages, language, None)
-    if not mod:
-        print(f'Unsupported Language: {language}.')
-        return
-    lang_class = getattr(mod, language.capitalize(), None)
-    if not lang_class:
-        print(f'Unsupported Language: {language} in {mod}.')
-        return
-    lang = lang_class()
-
-    phrases = []
-    phrase = []
-    for word in [lang.word() for _ in range(int(count))]:
-        phrase.append(str(word))
-        if len(phrase) >= random.randint(1, 12):
-            phrases.append(' '.join(phrase))
-            phrase = []
-    if phrase:
-        phrases.append(' '.join(phrase))
-
-    paragraph = phrases[0].capitalize()
-    for phrase in phrases[1:]:
-        if random.choice([0, 0, 1]):
-            paragraph = paragraph + random.choice('?!.') + ' ' + phrase.capitalize()
-        else:
-            paragraph = paragraph + ', ' + phrase
-    print(f"{paragraph}.")
+def noble() -> None:
+    """
+    Generate a basic NPC.
+    """
+    char = get_npc(randomize=True, noble=True)
+    if app_state['verbose']:
+        print(char.character_sheet)
+    else:
+        print(char)
 
 
 if __name__ == '__main__':

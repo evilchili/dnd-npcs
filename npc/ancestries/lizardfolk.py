@@ -1,22 +1,17 @@
-from npc.languages import lizardfolk
-from npc.generator.base import BaseNPC, a_or_an
-
+from functools import cached_property
 import textwrap
 import random
 
+from language.languages import lizardfolk
+from npc import types
 
-class NPC(BaseNPC):
 
-    ancestry = 'Lizardfolk'
-    language = lizardfolk.Lizardfolk()
+class Lizardfolk(types.NPC):
+    language = lizardfolk
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self._tail = None
-        self._horns = None
-        self._fangs = None
-        self._frills = None
+    has_tail = True
+    has_horns = True
+    has_fangs = True
 
     @property
     def age(self):
@@ -38,19 +33,17 @@ class NPC(BaseNPC):
                 self._tail = 'no'
         return self._tail
 
-    @property
+    @cached_property
     def frills(self):
-        if not self._frills:
-            if self.age in ('adult', 'ancient'):
-                self._frills = random.choice([
-                    'orange',
-                    'red',
-                    'yellow',
-                    'green',
-                    'blue',
-                    'silvery',
-                ])
-        return self._frills
+        if self.age in ('adult', 'ancient'):
+            return random.choice([
+                'orange',
+                'red',
+                'yellow',
+                'green',
+                'blue',
+                'silvery',
+            ])
 
     @property
     def skin_color(self):
@@ -76,8 +69,8 @@ class NPC(BaseNPC):
             self.facial_structure,
         ])
         return (
-            f"{self.full_name} ({self.pronouns}) is {a_or_an(self.age)} {self.age}, {self.skin_color}-scaled "
-            f"{self.ancestry.lower()} with {a_or_an(self.nose)} {self.nose} snout, {self.body} body and {trait}."
+            f"{self.fullname} ({self.pronouns}) is {types.a_or_an(self.age)} {self.age}, {self.skin_color}-scaled "
+            f"{self.ancestry.lower()} with {types.a_or_an(self.nose)} {self.nose} snout, {self.body} body and {trait}."
         )
 
     @property
@@ -106,3 +99,6 @@ Goal:        {self.goal}
 Whereabouts: {self.whereabouts}
 
 """
+
+
+NPC = Lizardfolk

@@ -1,39 +1,125 @@
-from importlib import import_module
-from npc.generator import traits
-import os
-import glob
+from npc import traits
 import random
 import dice
 import textwrap
+import logging
 
+from typing import Union
 
-AVAILABLE_NPC_TYPES = {}
+from language.types import Name, Language
 
 
 def a_or_an(s):
     return 'an' if s[0] in 'aeiouh' else 'a'
 
 
-class BaseNPC:
+class StatBlock:
+
+    def __init__(
+        self,
+        STR: int = 10,
+        DEX: int = 10,
+        CON: int = 10,
+        INT: int = 10,
+        WIS: int = 10,
+        CHA: int = 10,
+        HP: int = 10,
+        AC: int = 10,
+        speed: int = 30,
+        passive_perception: int = 10,
+        passive_investigation: int = 10,
+    ):
+        self.STR = STR
+        self.DEX = DEX
+        self.CON = CON
+        self.INT = INT
+        self.WIS = WIS
+        self.CHA = CHA
+        self.HP = HP
+        self.AC = AC
+        self.speed = speed
+        self.passive_perception = passive_perception
+        self.passive_investigation = passive_investigation
+
+    def randomize(self):
+        stats = [15, 14, 13, 12, 10, 8]
+        random.shuffle(stats)
+        if random.random() < 0.3:
+            i = random.choice(range(len(stats)))
+            stats[i] += (random.choice([-1, 1]) * random.randint(1, 3))
+        (self.STR, self.DEX, self.CON, self.INT, self.WIS, self.CHA) = stats
+        self.HP = str(sum(dice.roll('2d8')) + 2) + ' (2d8+2)'
+
+    def __str__(self):
+        return textwrap.dedent(f"""
+            AC  {self.AC}
+            HP  {self.HP}
+            STR {self.STR}
+            DEX {self.DEX}
+            CON {self.CON}
+            INT {self.INT}
+            WIS {self.WIS}
+            CHA {self.CHA}
+
+            Speed: {self.speed}
+
+            Passive Perception: {self.passive_perception}
+            Passive Investigation: {self.passive_perception}
+        """)
+
+
+class NPC:
     """
-    The base class for NPCs.
+    Return a randomized NPC. Any supplied keyword parameters will override
+    generated, randomized values.
+
+    By default, NPC stats are all 10 (+0). If randomize is True, the NPC will
+    be given random stats from the standard distribution, but overrides will
+    still take precedence.
     """
 
-    # define this on your subclass
+    # Define this as a language module from language.supported_languages.values()
     language = None
 
-    _names = []
+    # appearance
+    has_eyes = True
+    has_hair = True
+    has_face = True
+    has_body = True
+    has_nose = True
+    has_lips = True
+    has_teeth = True
+    has_skin_tone = True
+    has_skin_color = True
+    has_facial_hair = True
+    has_facial_structure = True
+    has_eyebrows = True
 
-    def __init__(self, names=[], title=None, pronouns=None, nickname=None, whereabouts='Unknown', randomize=False,
-                 STR=None, DEX=None, CON=None, INT=None, WIS=None, CHA=None):
+    has_age = True
+    has_voice = True
+
+    has_tail = False
+    has_horns = False
+    has_fangs = False
+    has_wings = False
+
+    def __init__(
+        self,
+        name: Union[Name, None] = None,
+        pronouns: Union[str, None] = None,
+        whereabouts: str = "Unknown",
+        stats: StatBlock = StatBlock(),
+        noble: bool = False,
+        randomize: bool = False,
+        language: Union[Language, None] = None,
+    ):
 
         # identity
-        self._names = []
-        self._pronouns = pronouns
-        self._nickname = nickname
-        self._title = title
-
+        self._name = name
+        self._is_noble = noble
         self._whereabouts = whereabouts
+        self._stats = stats
+        self._pronouns = pronouns
 
         # appearance
         self._eyes = None
@@ -50,53 +136,40 @@ class BaseNPC:
         self._eyebrows = None
         self._age = None
         self._voice = None
-
-        self._tail = False
-        self._horns = False
-        self._fangs = False
-        self._wings = False
+        self._tail = None
+        self._horns = None
+        self._fangs = None
+        self._wings = None
 
         # character
         self._flaw = None
         self._goal = None
         self._personality = None
 
-        stats = (10, 10, 10, 10, 10, 10)
+        if language:
+            self.language = language
+
         if randomize:
-            stats = self._roll_stats()
-        self.STR = STR if STR else stats[0]
-        self.DEX = DEX if DEX else stats[1]
-        self.CON = CON if DEX else stats[2]
-        self.INT = INT if DEX else stats[3]
-        self.WIS = WIS if DEX else stats[4]
-        self.CHA = CHA if DEX else stats[5]
-
-        self._HP = None
-
-    def _roll_stats(self):
-        stats = [15, 14, 13, 12, 10, 8]
-        random.shuffle(stats)
-        r = random.random()
-        if r < 0.3:
-            i = random.choice(range(len(stats)))
-            stats[i] += (random.choice([-1, 1]) * random.randint(1, 3))
-        return stats
+            self.stats.randomize()
 
     @property
-    def HP(self):
-        if not self._HP:
-            self._HP = str(sum(dice.roll('2d8')) + 2) + ' (2d8+2)'
-        return self._HP
+    def ancestry(self) -> str:
+        return self.__class__.__name__
 
     @property
-    def names(self):
-        if not self._names:
-            self._names = next(self.name_generator.name(1))
-        return self._names
+    def is_noble(self) -> bool:
+        return self._is_noble
 
     @property
-    def full_name(self):
-        return self.names.fullname
+    def name(self):
+        if not self._name:
+            generator = getattr(
+                self.language,
+                'NobleName' if self.is_noble else 'Name'
+            )
+            self._name = generator.name()[0]
+            logging.debug(self._name)
+        return self._name['fullname']
 
     @property
     def pronouns(self):
@@ -251,9 +324,13 @@ class BaseNPC:
         return self._voice
 
     @property
+    def stats(self):
+        return self._stats
+
+    @property
     def description(self):
         desc = (
-            f"{self.full_name} ({self.pronouns}) is {a_or_an(self.age)} {self.age}, {self.body} "
+            f"{self.name} ({self.pronouns}) is {a_or_an(self.age)} {self.age}, {self.body} "
             f"{self.ancestry.lower()} with {self.hair} hair, {self.eyes} eyes and {self.skin_color} skin."
         )
         trait = None
@@ -267,9 +344,9 @@ class BaseNPC:
                 self.facial_structure if self.facial_structure else None,
             ])
         desc = desc + ' ' + f"Their face is {self.face}, with {trait}."
-        if self.tail:
+        if self.has_tail:
             desc = desc + f" Their tail is {self.tail}."
-        if self.horns:
+        if self.has_horns:
             desc = desc + f" Their horns are {self.horns}."
         return desc
 
@@ -295,14 +372,7 @@ Wings:  {self.wings}
 Voice: {self.voice}
 
 Stats:
-    AC  10
-    HP  {self.HP}
-    STR {self.STR}
-    DEX {self.DEX}
-    CON {self.CON}
-    INT {self.INT}
-    WIS {self.WIS}
-    CHA {self.CHA}
+{textwrap.indent(str(self.stats), prefix='    ')}
 
 Details:
 
@@ -315,52 +385,4 @@ Whereabouts: {self.whereabouts}
 """
 
     def __repr__(self):
-        return f"{self.full_name}"
-
-
-def available_npc_types():
-    """
-    Load all available NPC submodules and return a dictionary keyed by module name.
-    """
-    if not AVAILABLE_NPC_TYPES:
-        for filename in glob.glob(os.path.join(os.path.dirname(os.path.abspath(__file__)), '*.py')):
-            module_name = os.path.basename(filename)[:-3]
-            if module_name not in ['base', '__init__', 'traits']:
-                AVAILABLE_NPC_TYPES[module_name] = import_module(f'npc.generator.{module_name}').NPC
-    return AVAILABLE_NPC_TYPES
-
-
-def npc_type(ancestry=None):
-    """
-    Return the NPC class for the specified ancestry, or a random one.
-    """
-    if not ancestry:
-        non_humans = [x for x in available_npc_types() if x != 'human']
-        if random.random() <= 0.7:
-            ancestry = 'human'
-        else:
-            ancestry = random.choice(non_humans)
-    return available_npc_types()[ancestry]
-
-
-def generate_npc(ancestry=None, names=[], pronouns=None, title=None, nickname=None, whereabouts="Unknown",
-                 STR=0, DEX=0, CON=0, INT=0, WIS=0, CHA=0, randomize=False):
-    """
-    Return a randomized NPC. Any supplied keyword parameters will override the generated values.
-
-    By default, NPC stats are all 10 (+0). If randomize is True, the NPC will be given random stats from the standard distribution, but overrides will still take precedence.
-    """
-    return npc_type(ancestry)(
-        names=names,
-        pronouns=pronouns,
-        title=title,
-        nickname=nickname,
-        whereabouts=whereabouts,
-        STR=STR,
-        DEX=DEX,
-        CON=CON,
-        INT=INT,
-        WIS=WIS,
-        CHA=CHA,
-        randomize=randomize
-     )
+        return self.description
