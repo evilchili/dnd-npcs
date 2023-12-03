@@ -157,6 +157,16 @@ class NPC:
         return self.__class__.__name__
 
     @property
+    def names(self):
+        if not self._names:
+            self._names = next(self.name_generator.name(1))
+        return self._names
+
+    @property
+    def full_name(self):
+        return self.names.fullname
+
+    @property
     def is_noble(self) -> bool:
         return self._is_noble
 

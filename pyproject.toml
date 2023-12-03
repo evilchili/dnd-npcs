@@ -6,7 +6,6 @@ authors = ["evilchili <evilchili@gmail.com>"]
 license = "The Unlicense"
 packages = [
     { include = 'npc' },
-    { include = 'language' },
 ]
 
 [tool.poetry.dependencies]
@@ -48,4 +47,3 @@ remove-unused-variables = true       # remove unused variables
 
 [tool.poetry.scripts]
 npc = "npc.cli:app"
-language-tool = "language.cli:app"
