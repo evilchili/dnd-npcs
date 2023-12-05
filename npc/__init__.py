@@ -1,12 +1,13 @@
 import importlib
 import os
 import pkgutil
+import random
 import sys
 
+from functools import cache
 from types import ModuleType
 
-ancestry_pack = None
-supported_ancestries = None
+from .types import NPC
 
 
 def _import_submodules(module):
@@ -15,6 +16,7 @@ def _import_submodules(module):
         yield importlib.import_module(f"{module.__name__}.{module_name}")
 
 
+@cache
 def load_ancestry_pack(module_name: str = "") -> ModuleType:
     if not module_name:
         module_name = os.getenv("NPC_ANCESTRY_PACK", "npc.ancestries")
@@ -24,3 +26,9 @@ def load_ancestry_pack(module_name: str = "") -> ModuleType:
         (module.__name__.split(".")[-1], module) for module in list(_import_submodules(sys.modules[module_name]))
     )
     return ancestry_pack, supported_ancestries
+
+
+def random_npc(ancestries: list = []) -> NPC:
+    if not ancestries:
+        _, ancestries = load_ancestry_pack()
+    return random.choice(list(ancestries.values())).NPC()
