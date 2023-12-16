@@ -30,5 +30,5 @@ def load_ancestry_pack(module_name: str = "") -> ModuleType:
 
 def random_npc(ancestries: list = []) -> NPC:
     if not ancestries:
-        _, ancestries = load_ancestry_pack()
-    return random.choice(list(ancestries.values())).NPC()
+        ancestries = list(load_ancestry_pack()[1].values())
+    return random.choice(ancestries).NPC()
