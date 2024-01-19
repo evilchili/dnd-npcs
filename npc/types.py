@@ -164,7 +164,8 @@ class NPC:
 
     @property
     def full_name(self):
-        return self.names.fullname
+        """Legacy interface"""
+        return self.name
 
     @property
     def is_noble(self) -> bool:
